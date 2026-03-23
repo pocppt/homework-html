@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密码生成器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #5a6fd6;
+        }
+
+        .length-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .password-display {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .password-display .password {
+            font-size: 24px;
+            font-family: 'Courier New', monospace;
+            color: #333;
+            word-break: break-all;
+            min-height: 36px;
+        }
+
+        .password-display .empty-message {
+            color: #999;
+            font-style: italic;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-copy {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-copy:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .error {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .special-characters {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 密码生成器</h1>
+
+        <div class="form-group">
+            <label for="passwordLength">密码长度: <span id="lengthValue" class="length-value">12</span></label>
+            <div class="slider-container">
+                <input type="range" id="passwordLength" min="6" max="16" value="12">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="includeSpecial" checked>
+                <label for="includeSpecial">包含特殊字符</label>
+            </div>
+            <div class="special-characters">特殊字符: !@#$%*()-</div>
+        </div>
+
+        <div class="form-group">
+            <label for="maxSpecialChars">特殊字符最大个数: <span id="maxSpecialValue" class="length-value">2</span></label>
+            <select id="maxSpecialChars">
+                <option value="0">0 个（不包含特殊字符）</option>
+                <option value="1">1 个</option>
+        <option value="2" selected>2 个</option>
+        <option value="3">3 个</option>
+            </select>
+        </div>
+
+        <div class="password-display">
+            <div id="passwordResult" class="password empty-message">点击生成按钮创建密码</div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-generate" id="generateBtn">生成密码</button>
+            <button class="btn btn-copy" id="copyBtn">复制</button>
+        </div>
+    </div>
+
+    <script>
+        // 密码字符集
+        const LOWERCASE = 'abcdefghijklmnopqrstuvwxyz';
+        const UPPERCASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const DIGITS = '0123456789';
+        const SPECIAL_CHARS = '!@#$%*()-';
+
+        // DOM 元素
+        const passwordLengthInput = document.getElementById('passwordLength');
+        const lengthValueDisplay = document.getElementById('lengthValue');
+        const includeSpecialCheckbox = document.getElementById('includeSpecial');
+        const maxSpecialCharsSelect = document.getElementById('maxSpecialChars');
+        const maxSpecialValueDisplay = document.getElementById('maxSpecialValue');
+        const passwordResult = document.getElementById('passwordResult');
+        const generateBtn = document.getElementById('generateBtn');
+        const copyBtn = document.getElementById('copyBtn');
+
+        // 更新长度显示
+        passwordLengthInput.addEventListener('input', function() {
+            lengthValueDisplay.textContent = this.value;
+        });
+
+        // 更新特殊字符最大个数显示
+        maxSpecialCharsSelect.addEventListener('change', function() {
+            const value = this.value;
+            maxSpecialValueDisplay.textContent = value === '0' ? '0' : value + ' 个';
+        });
+
+        // 生成随机数
+        function getRandomInt(min, max) {
+            const range = max - min + 1;
+            const maxRange = 256;
+            const bucket = Math.floor(maxRange / range);
+            const limit = Math.floor(256 / range) * range;
+            
+            let randomValue;
+            do {
+                const array = new Uint8Array(1);
+                window.crypto.getRandomValues(array);
+                randomValue = array[0];
+            } while (randomValue >= limit);
+            
+            return min + (randomValue % range);
+        }
+
+        // 从字符集中随机选择一个字符
+        function getRandomChar(charset) {
+            const index = getRandomInt(0, charset.length - 1);
+            return charset[index];
+        }
+
+        // 生成密码
+        function generatePassword() {
+            const length = parseInt(passwordLengthInput.value);
+            const includeSpecial = includeSpecialCheckbox.checked;
+            const maxSpecial = parseInt(maxSpecialCharsSelect.value);
+
+            // 构建字符集
+            let charset = LOWERCASE + UPPERCASE + DIGITS;
+            let specialCharset = SPECIAL_CHARS;
+
+            if (!includeSpecial) {
+                specialCharset = '';
+            }
+
+            // 如果不包含特殊字符，直接生成普通密码
+            if (!includeSpecial || maxSpecial === 0) {
+                let password = '';
+                for (let i = 0; i < length; i++) {
+                    password += getRandomChar(charset);
+                }
+                return password;
+            }
+
+            // 确保特殊字符数量在 1 到 maxSpecial 之间
+            const specialCount = getRandomInt(1, Math.min(maxSpecial, length - 1));
+            const normalCount = length - specialCount;
+
+            // 生成普通字符部分
+            let passwordChars = [];
+            for (let i = 0; i < normalCount; i++) {
+                passwordChars.push(getRandomChar(LOWERCASE + UPPERCASE + DIGITS));
+            }
+
+            // 生成特殊字符部分
+            for (let i = 0; i < specialCount; i++) {
+                passwordChars.push(getRandomChar(specialCharset));
+            }
+
+            // 使用 Fisher-Yates 洗牌算法随机打乱字符顺序
+            for (let i = passwordChars.length - 1; i > 0; i--) {
+                const j = getRandomInt(0, i);
+                [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
+            }
+
+            return passwordChars.join('');
+        }
+
+        // 生成按钮点击事件
+        generateBtn.addEventListener('click', function() {
+            const password = generatePassword();
+            passwordResult.textContent = password;
+            passwordResult.classList.remove('empty-message');
+        });
+
+        // 复制按钮点击事件
+        copyBtn.addEventListener('click', function() {
+            const password = passwordResult.textContent;
+            
+            if (password === '点击生成按钮创建密码') {
+                alert('请先生成密码！');
+                return;
+            }
+
+            navigator.clipboard.writeText(password).then(function() {
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✓ 已复制';
+                copyBtn.style.background = '#218838';
+                
+                setTimeout(function() {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = '';
+                }, 2000);
+            }).catch(function(err) {
+                // 如果 Clipboard API 不可用，使用旧方法
+                const textarea = document.createElement('textarea');
+                textarea.value = password;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                alert('密码已复制到剪贴板！');
+            });
+        });
+
+        // 页面加载时生成一个初始密码
+        window.addEventListener('load', function() {
+            const initialPassword = generatePassword();
+            passwordResult.textContent = initialPassword;
+            passwordResult.classList.remove('empty-message');
+        });
+    </script>
+</body>
+</html>
